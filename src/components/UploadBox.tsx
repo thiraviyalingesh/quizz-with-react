@@ -21,17 +21,49 @@ const UploadBox: React.FC<UploadBoxProps> = ({ onFileParsed }) => {
 
   // Dummy parser for now
   const parseQuestions = (raw: string): any[] => {
-    const blocks = raw.split("Question:").slice(1);
-    return blocks.map((block) => {
-      const lines = block.trim().split("\n").map(l => l.trim());
-      const question = lines[0];
-      const options = lines.slice(1, 5).map((line) => line.replace(/^\(\d\)\s*/, ""));
-      const answerLine = lines.find(l => l.startsWith("Answer:"));
-      const correctAnswer = answerLine ? parseInt(answerLine.match(/\((\d)\)/)?.[1] || "1") - 1 : 0;
+  const lines = raw.split("\n");
+  const questions: any[] = [];
+  let currentTopic = "";
 
-      return { question, options, correctAnswer };
-    });
-  };
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+
+    // Detect topic headers
+    if (/^\d+\.\s.+NEET/i.test(line)) {
+      currentTopic = line.split(" - ")[0].replace(/^\d+\.\s*/, '').trim();
+      continue;
+    }
+
+    if (line.startsWith("Question:")) {
+      const question = line.replace("Question:", "").trim();
+      const options = [];
+      let j = i + 1;
+      while (options.length < 4 && j < lines.length) {
+        const optLine = lines[j].trim();
+        if (optLine.match(/^\(\d\)/)) {
+          options.push(optLine.replace(/^\(\d\)\s*/, ""));
+        }
+        j++;
+      }
+
+      let correctAnswer = 0;
+      while (j < lines.length) {
+        const answerLine = lines[j].trim();
+        if (answerLine.startsWith("Answer:")) {
+          correctAnswer = parseInt(answerLine.match(/\((\d)\)/)?.[1] || "1") - 1;
+          break;
+        }
+        j++;
+      }
+
+      questions.push({ question: `${currentTopic} – ${question}`, options, correctAnswer });
+      i = j;
+    }
+  }
+
+  return questions;
+};
+
 
   return (
     <div className="p-4 bg-white rounded shadow-md w-full max-w-md mx-auto">

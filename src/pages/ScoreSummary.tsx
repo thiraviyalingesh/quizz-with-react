@@ -1,8 +1,9 @@
+// ✅ Final ScoreSummary.tsx (No Answer Reveal to Students)
 import React from 'react';
 
 const ScoreSummary: React.FC = () => {
-  const studentName = localStorage.getItem("studentName") || "Guest";
-  const topic = localStorage.getItem("currentTopic") || "";
+  const studentName = localStorage.getItem("lastQuizUser") || "Guest";
+  const topic = localStorage.getItem("lastQuizTopic") || "";
   const score = parseInt(localStorage.getItem(`${studentName}_${topic}_score`) || "0", 10);
 
   const attemptLog = JSON.parse(localStorage.getItem("attempts") || "{}");
@@ -28,31 +29,8 @@ const ScoreSummary: React.FC = () => {
         <p className="text-lg mb-2">🎯 Accuracy: <strong>{accuracy}%</strong></p>
         <p className="text-lg mb-4">{getMessage()}</p>
 
-        <h2 className="text-xl font-bold mt-6 mb-3">📊 Question Analytics</h2>
-        <div className="space-y-3 max-h-96 overflow-y-auto pr-2">
-          {questionData.map((q: any, idx: number) => {
-            const correct = q.selected === q.correct;
-            return (
-              <div
-                key={idx}
-                className={`p-3 border rounded ${
-                  correct ? "bg-green-100 border-green-400" : "bg-red-100 border-red-400"
-                }`}
-              >
-                <p className="font-semibold mb-1">Q{idx + 1}: {q.question}</p>
-                <p>
-                  Your Answer: <strong>{q.options?.[q.selected] || `Option ${q.selected + 1}`}</strong>
-                  {" "}
-                  {correct ? "✅" : "❌"}
-                </p>
-                {!correct && (
-                  <p>
-                    Correct Answer: <strong>{q.options?.[q.correct] || `Option ${q.correct + 1}`}</strong>
-                  </p>
-                )}
-              </div>
-            );
-          })}
+        <div className="text-center text-gray-600 italic mt-6">
+          📩 Your results have been submitted. You will receive them from your teacher.
         </div>
 
         <div className="mt-6 text-center">

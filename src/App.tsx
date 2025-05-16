@@ -8,31 +8,21 @@ import TableOfContents from "./pages/TableOfContents";
 import QuizScreen from "./pages/QuizScreen";
 import ScoreSummary from "./pages/ScoreSummary";
 
-
 const App: React.FC = () => {
   const isAdmin = localStorage.getItem("isAdmin") === "true";
 
   return (
     <Router>
       <Routes>
-        {/* Admin Routes */}
-        <Route
-  path="/admin"
-  element={isAdmin ? <AdminPage /> : <Navigate to="/admin-login" />}
-/>
+        <Route path="/admin" element={isAdmin ? <AdminPage /> : <Navigate to="/admin-login" />} />
         <Route path="/admin-login" element={<AdminLogin />} />
-        <Route path="/" element={<Navigate to="/admin-login" />} />
 
-        {/* Student Routes */}
-        <Route path="/" element={<StudentEntry />} />
+        <Route path="/buzztrackers-quizz/:quizId" element={<StudentEntry />} />
         <Route path="/table" element={<TableOfContents />} />
-
         <Route path="/quiz" element={<QuizScreen />} />
-
         <Route path="/score-summary" element={<ScoreSummary />} />
 
-        {/* Fallback */}
-        <Route path="*" element={<Navigate to="/" />} />
+        <Route path="*" element={<Navigate to="/admin-login" />} />
       </Routes>
     </Router>
   );

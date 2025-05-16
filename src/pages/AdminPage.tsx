@@ -1,107 +1,100 @@
-import jsPDF from "jspdf"; 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import UploadBox from '../components/UploadBox';
-import TableOfContents from './TableOfContents';
-
-interface Question {
-  question: string;
-  options: string[];
-  correctAnswer: number;
-}
 
 const AdminPage: React.FC = () => {
-  const [step, setStep] = useState<1 | 2 | 3>(1); // step 1: upload, 2: name, 3: toc
-  const [studentName, setStudentName] = useState("");
-  const [questions, setQuestions] = useState<Question[]>([]);
+  const [tempLink, setTempLink] = useState<string | null>(null);
+  const [quizId, setQuizId] = useState<string | null>(null);
+  const [attempts, setAttempts] = useState<{ [key: string]: any[] }>({});
+  const [expandedStudent, setExpandedStudent] = useState<string | null>(null);
 
-  const handleParsedQuestions = (parsed: Question[]) => {
-    const combined = [...questions, ...parsed];
-    setQuestions(combined);
-    localStorage.setItem("quizData", JSON.stringify(combined));
-    setStep(2); // Go to student name entry
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const newAttempts = JSON.parse(localStorage.getItem("attempts") || "{}");
+      setAttempts(newAttempts);
+    }, 3000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleParsedQuestions = (parsed: any[]) => {
+    // ✅ CLEAR previous attempts on upload
+    localStorage.removeItem("attempts");
+
+    const newQuizId = `buzz-${Math.random().toString(36).substring(2, 8)}`;
+    const link = `${window.location.origin}/buzztrackers-quizz/${newQuizId}`;
+    localStorage.setItem(`quiz_${newQuizId}`, JSON.stringify(parsed));
+    localStorage.setItem(`quiz_${newQuizId}_expires`, (Date.now() + 60 * 60 * 1000).toString());
+    localStorage.setItem("quizData", JSON.stringify(parsed));
+    setQuizId(newQuizId);
+    setTempLink(link);
+    setAttempts({});
   };
 
-  const handleNameSubmit = () => {
-    if (!studentName.trim()) return;
-    localStorage.setItem("studentName", studentName.trim());
-    setStep(3); // Go to Table of Contents
-  };
-
-  const getAllScores = () => {
-    const attempts = JSON.parse(localStorage.getItem("attempts") || "{}");
-    const scoreLines = Object.entries(attempts).map(([key, logs]: [string, any]) => {
-      const score = logs.filter((entry: any) => entry.selected === entry.correct).length;
-      return {
-        student: key.split("_")[0],
-        topic: key.split("_")[1],
-        score
-      };
-    });
-    return scoreLines;
-  };
+  const groupedByStudent: { [student: string]: { topic: string; logs: any[] }[] } = {};
+  Object.entries(attempts).forEach(([key, logs]) => {
+    const [student, topic] = key.split("_");
+    if (!groupedByStudent[student]) groupedByStudent[student] = [];
+    groupedByStudent[student].push({ topic, logs });
+  });
 
   return (
     <div className="min-h-screen bg-gray-100 p-6">
       <h1 className="text-3xl font-bold mb-6">Admin Panel</h1>
-
-      {step === 1 && (
-        <>
+      {!tempLink && (
+        <div
+          onClick={() => localStorage.removeItem("attempts")}
+          className="cursor-pointer"
+        >
           <UploadBox onFileParsed={handleParsedQuestions} />
-        </>
-      )}
-
-      {step === 2 && (
-        <div className="bg-white p-6 rounded shadow-md max-w-md mx-auto">
-          <label className="block text-lg font-medium mb-2">👤 Enter your name</label>
-          <input
-            type="text"
-            value={studentName}
-            onChange={(e) => setStudentName(e.target.value)}
-            placeholder="Your name"
-            className="px-4 py-2 border rounded w-full mb-4"
-          />
-          <button
-            onClick={handleNameSubmit}
-            className="w-full bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-          >
-            Continue
-          </button>
         </div>
       )}
 
-      {step === 3 && (
-        <div className="mt-6">
-          <TableOfContents />
-
-          {/* 📊 Student Scores Section */}
-          <div className="mt-10 bg-white p-6 rounded shadow">
-            <h2 className="text-xl font-bold mb-4">📊 Student Scores</h2>
-            {getAllScores().map((item, idx) => (
-              <div
-                key={idx}
-                className="border-b py-2 flex justify-between text-gray-700"
-              >
-                <span>{item.student} - {item.topic}</span>
-                <span className="font-semibold">{item.score} points</span>
-              </div>
-            ))}
-
-            <button
-              className="mt-4 bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
-              onClick={() => {
-                const mailBody = getAllScores()
-                  .map(i => `${i.student} - ${i.topic}: ${i.score} marks`)
-                  .join("\n");
-                const subject = encodeURIComponent("Quiz Scores Report");
-                const body = encodeURIComponent(mailBody);
-                window.location.href = `mailto:?subject=${subject}&body=${body}`;
-              }}
-            >
-              📧 Send Report via Email
-            </button>
+      {tempLink && (
+        <div className="mt-6 p-6 bg-white rounded shadow-md">
+          <h2 className="text-xl font-bold text-green-700">✅ Quiz Link Generated</h2>
+          <p className="text-gray-600 mb-1">Share this with students (valid 1 hour):</p>
+          <div className="bg-gray-100 p-3 rounded border text-blue-600 font-mono">
+            <a href={tempLink} target="_blank" rel="noopener noreferrer">{tempLink}</a>
           </div>
         </div>
       )}
+
+      <div className="mt-10 bg-white p-6 rounded shadow-md">
+        <h2 className="text-xl font-semibold mb-4 text-indigo-700">📢 Student Submissions</h2>
+        {Object.keys(groupedByStudent).length === 0 ? (
+          <p className="text-gray-500">No attempts yet.</p>
+        ) : (
+          <div>
+            {Object.entries(groupedByStudent).map(([student, topics], idx) => (
+              <div key={idx} className="mb-4 border rounded shadow-sm">
+                <button
+                  onClick={() => setExpandedStudent(expandedStudent === student ? null : student)}
+                  className="w-full text-left px-4 py-2 bg-blue-50 hover:bg-blue-100 border-b font-semibold"
+                >
+                  👤 {student}
+                </button>
+                {expandedStudent === student && (
+                  <div className="px-4 py-2 bg-white">
+                    {topics.map((t, i) => {
+                      const score = t.logs.filter(q => q.selected === q.correct).length;
+                      return (
+                        <div key={i} className="border-b py-2">
+                          <p className="font-medium">📘 {t.topic}</p>
+                          <p className="text-sm text-gray-600">Score: {score} / {t.logs.length}</p>
+                          <ul className="list-disc ml-5 text-sm mt-1 text-gray-700">
+                            {t.logs.map((q, idx) => (
+                              <li key={idx}>{q.question.slice(0, 40)}... → {q.selected === q.correct ? '✅' : '❌'}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 };

@@ -1,3 +1,5 @@
+CLONE THE GIT REPO FIRST.. THEN FOLLOW THIS DEETS
+
 
 ### 1 . Setup Frontend (React)
 

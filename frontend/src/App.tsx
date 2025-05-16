@@ -17,7 +17,9 @@ const App: React.FC = () => {
         <Route path="/admin" element={isAdmin ? <AdminPage /> : <Navigate to="/admin-login" />} />
         <Route path="/admin-login" element={<AdminLogin />} />
 
-        <Route path="/buzztrackers-quizz/:quizId" element={<StudentEntry />} />
+        {/* Changed from dynamic quizId to hardcoded /start route */}
+        <Route path="/buzztrackers-quizz/start" element={<StudentEntry />} />
+
         <Route path="/table" element={<TableOfContents />} />
         <Route path="/quiz" element={<QuizScreen />} />
         <Route path="/score-summary" element={<ScoreSummary />} />

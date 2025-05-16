@@ -1,7 +1,5 @@
 import React, { useEffect, useState } from 'react';
 
-
-
 interface Question {
   question: string;
   options: string[];
@@ -20,28 +18,24 @@ const QuizScreen: React.FC = () => {
 
   const [tabChangeCount, setTabChangeCount] = useState(0);
   const [quizLocked, setQuizLocked] = useState(false);
-
   const [timeLeft, setTimeLeft] = useState(60);
 
   useEffect(() => {
-  const timer = setInterval(() => {
-    setTimeLeft(prev => {
-      if (prev <= 1) {
-        clearInterval(timer);
-        alert("⏰ Time's up! Submitting your quiz.");
-        localStorage.setItem(`${studentName}_${topic}_done`, "true");
-        localStorage.setItem(`${studentName}_${topic}_score`, score.toString());
-        window.location.href = "/admin";
-        return 0;
-      }
-      return prev - 1;
-    });
-  }, 1000);
-
-  return () => clearInterval(timer);
-}, []);
-
-
+    const timer = setInterval(() => {
+      setTimeLeft(prev => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          alert("⏰ Time's up! Submitting your quiz.");
+          localStorage.setItem(`${studentName}_${topic}_done`, "true");
+          localStorage.setItem(`${studentName}_${topic}_score`, score.toString());
+          checkAllTopicsComplete();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     const handleVisibilityChange = () => {
@@ -49,17 +43,15 @@ const QuizScreen: React.FC = () => {
         setTabChangeCount(prev => {
           const next = prev + 1;
           if (next === 1) alert("⚠️ Please don’t switch tabs.");
-            if (next === 2) {
-                setQuizLocked(true);
-                alert("⛔ Quiz Locked! You will be redirected in 10 seconds.");
-                localStorage.setItem(`${studentName}_${topic}_done`, "true");
-                localStorage.setItem(`${studentName}_${topic}_score`, score.toString());
-
-                setTimeout(() => {
-                    window.location.href = "/score-summary";
-                }, 10000);
-            }
-
+          if (next === 2) {
+            setQuizLocked(true);
+            alert("⛔ Quiz Locked! You will be redirected in 10 seconds.");
+            localStorage.setItem(`${studentName}_${topic}_done`, "true");
+            localStorage.setItem(`${studentName}_${topic}_score`, score.toString());
+            setTimeout(() => {
+              window.location.href = "/score-summary";
+            }, 10000);
+          }
           return next;
         });
       }
@@ -70,80 +62,85 @@ const QuizScreen: React.FC = () => {
   }, []);
 
   const handleOptionSelect = (index: number) => {
-    if (selected === null && !quizLocked) {
+    if (!quizLocked) {
       setSelected(index);
-      const isCorrect = index === questions[currentIndex].correctAnswer;
-      if (isCorrect) setScore(prev => prev + 1);
-
-      const attemptLog = JSON.parse(localStorage.getItem("attempts") || "{}");
-      const key = `${studentName}_${topic}`;
-      const logEntry = {
-        question: questions[currentIndex].question,
-        selected: index,
-        correct: questions[currentIndex].correctAnswer
-      };
-      attemptLog[key] = attemptLog[key] || [];
-      attemptLog[key].push(logEntry);
-      localStorage.setItem("attempts", JSON.stringify(attemptLog));
     }
   };
 
   const handleNext = () => {
+    const isCorrect = selected === questions[currentIndex].correctAnswer;
+    if (isCorrect) setScore(prev => prev + 1);
+
+    const attemptLog = JSON.parse(localStorage.getItem("attempts") || "{}");
+    const key = `${studentName}_${topic}`;
+    const logEntry = {
+      question: questions[currentIndex].question,
+      selected,
+      correct: questions[currentIndex].correctAnswer
+    };
+    attemptLog[key] = attemptLog[key] || [];
+    attemptLog[key].push(logEntry);
+    localStorage.setItem("attempts", JSON.stringify(attemptLog));
+
     if (currentIndex === questions.length - 1) {
       localStorage.setItem(`${studentName}_${topic}_done`, "true");
       localStorage.setItem(`${studentName}_${topic}_score`, score.toString());
-      window.location.href = "/score-summary";
+      checkAllTopicsComplete();
     } else {
       setCurrentIndex(prev => prev + 1);
       setSelected(null);
     }
   };
 
+  const checkAllTopicsComplete = () => {
+    const quizData: Question[] = JSON.parse(localStorage.getItem("quizData") || "[]");
+    const topics = Array.from(new Set(quizData.map(q => q.question.split("–")[0].trim())));
+    const doneAll = topics.every(t => localStorage.getItem(`${studentName}_${t}_done`) === "true");
+    if (doneAll) {
+      window.location.href = "/score-summary";
+    } else {
+      window.location.href = "/table";
+    }
+  };
+
   if (quizLocked) {
-  return (
-    <div className="min-h-screen bg-red-50 flex items-center justify-center">
-      <div className="bg-white p-6 rounded shadow-lg border border-red-300 text-center max-w-md w-full">
-        <h2 className="text-2xl font-bold text-red-600 mb-2">🚫 Quiz Locked</h2>
-        <p className="mb-4 font-medium text-gray-800">
-          Tab switching has been detected. This action violates quiz integrity.
-        </p>
-        <div className="bg-yellow-100 border-l-4 border-yellow-400 p-3 text-left text-sm text-yellow-800 mb-4">
-          <p><strong>Warning:</strong> Multiple tab switches will result in termination.</p>
-          <ul className="list-disc ml-5 mt-2">
-            <li>Do not open new tabs</li>
-            <li>Do not minimize the window</li>
-            <li>Do not use search engines</li>
-          </ul>
+    return (
+      <div className="min-h-screen bg-red-50 flex items-center justify-center">
+        <div className="bg-white p-6 rounded shadow-lg border border-red-300 text-center max-w-md w-full">
+          <h2 className="text-2xl font-bold text-red-600 mb-2">🚫 Quiz Locked</h2>
+          <p className="mb-4 font-medium text-gray-800">
+            Tab switching has been detected. This action violates quiz integrity.
+          </p>
+          <div className="bg-yellow-100 border-l-4 border-yellow-400 p-3 text-left text-sm text-yellow-800 mb-4">
+            <p><strong>Warning:</strong> Multiple tab switches will result in termination.</p>
+            <ul className="list-disc ml-5 mt-2">
+              <li>Do not open new tabs</li>
+              <li>Do not minimize the window</li>
+              <li>Do not use search engines</li>
+            </ul>
+          </div>
+          <p className="text-sm text-gray-600 mb-4">
+            You will be logged out automatically in 10 seconds.
+          </p>
         </div>
-        <p className="text-sm text-gray-600 mb-4">
-          You will be logged out automatically in 10 seconds.
-        </p>
       </div>
-    </div>
-  );
-}
-
-
-  
+    );
+  }
 
   const current = questions[currentIndex];
 
-
   return (
     <div className="min-h-screen bg-gray-100 p-6">
-        <h2 className="text-xl font-bold mb-4">Question {currentIndex + 1} of {questions.length}</h2>
+      <h2 className="text-xl font-bold mb-4">Question {currentIndex + 1} of {questions.length}</h2>
       <div className="max-w-xl mx-auto bg-white rounded shadow p-6">
-
         <div className="text-right text-sm text-gray-600 mb-2">
-            Time Left: {Math.floor(timeLeft / 60)}:{String(timeLeft % 60).padStart(2, '0')}
-            </div>
-        <h2 className="text-xl font-bold mb-4">Question {currentIndex + 1} of {questions.length}</h2>
+          Time Left: {Math.floor(timeLeft / 60)}:{String(timeLeft % 60).padStart(2, '0')}
+        </div>
         <p className="mb-6">{current.question}</p>
         <div className="space-y-3">
           {current.options.map((opt, idx) => (
             <button
               key={idx}
-              disabled={selected !== null}
               onClick={() => handleOptionSelect(idx)}
               className={`w-full text-left px-4 py-2 border rounded ${
                 selected === idx
@@ -169,7 +166,5 @@ const QuizScreen: React.FC = () => {
     </div>
   );
 };
-
-
 
 export default QuizScreen;

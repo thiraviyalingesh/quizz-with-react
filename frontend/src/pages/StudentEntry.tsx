@@ -1,20 +1,18 @@
+// Updated StudentEntry.tsx
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
 
 const StudentEntry: React.FC = () => {
   const [name, setName] = useState('');
-  const { quizId } = useParams();
 
   useEffect(() => {
-    const expiry = parseInt(localStorage.getItem(`quiz_${quizId}_expires`) || "0", 10);
-    if (Date.now() > expiry) {
-      alert("⏳ This quiz link has expired.");
-      window.location.href = "/";
+    const quizData = localStorage.getItem("quizData");
+    if (quizData) {
+      localStorage.setItem("quizData", quizData); // re-store if needed
     } else {
-      const quizData = localStorage.getItem(`quiz_${quizId}`);
-      if (quizData) localStorage.setItem("quizData", quizData);
+      alert("❌ No quiz data found. Please contact the administrator.");
+      window.location.href = "/admin";
     }
-  }, [quizId]);
+  }, []);
 
   const handleStart = () => {
     if (!name.trim()) return;
